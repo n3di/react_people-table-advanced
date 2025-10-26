@@ -3,7 +3,7 @@ import { Loader } from './Loader';
 import { PeopleTable } from './PeopleTable';
 import { useEffect, useState } from 'react';
 import { getPeople } from '../api';
-import { Person } from '../types/Person';
+import { Person } from '../types/Person/Person';
 import { SortOrder } from '../types/SortOrder';
 import { useSearchParams } from 'react-router-dom';
 
@@ -53,26 +53,34 @@ export const PeoplePage = () => {
       });
   }, []);
 
+  // PeoplePage.tsx
   const sortPeople = (persons: Person[], order: SortOrder) => {
-    const foundEntry = Object.entries(order).find(
-      ([, value]) => value !== undefined,
-    );
+    const foundEntry = Object.entries(order).find(([, v]) => v !== undefined);
 
     if (!foundEntry) {
       return persons;
     }
 
-    const [sortKey, sortDirection] = foundEntry;
+    const [sortKey, direction] = foundEntry as [keyof Person, 'asc' | 'desc'];
+    const isNumber = sortKey === 'born' || sortKey === 'died';
 
     return [...persons].sort((a, b) => {
-      const aValue = a?.[sortKey as keyof Person] ?? '';
-      const bValue = b?.[sortKey as keyof Person] ?? '';
+      const av = a[sortKey];
+      const bv = b[sortKey];
 
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
+      if (isNumber) {
+        const na = (typeof av === 'number' ? av : Number(av ?? NaN)) ?? NaN;
+        const nb = (typeof bv === 'number' ? bv : Number(bv ?? NaN)) ?? NaN;
+        const cmp = na - nb || 0;
+
+        return direction === 'asc' ? cmp : -cmp;
       }
+
+      const sa = String(av ?? '').toLowerCase();
+      const sb = String(bv ?? '').toLowerCase();
+      const cmp = sa.localeCompare(sb);
+
+      return direction === 'asc' ? cmp : -cmp;
     });
   };
 
@@ -84,17 +92,19 @@ export const PeoplePage = () => {
     }
 
     if (query) {
+      const q = query.trim().toLowerCase();
+
       result = result.filter(
-        person =>
-          person.name.toLowerCase().includes(query.trim()) ||
-          person.motherName?.toLowerCase().includes(query.trim()) ||
-          person.fatherName?.toLowerCase().includes(query.trim()),
+        p =>
+          p.name.toLowerCase().includes(q) ||
+          (p.motherName?.toLowerCase().includes(q) ?? false) ||
+          (p.fatherName?.toLowerCase().includes(q) ?? false),
       );
     }
 
     if (centuries.length > 0) {
       result = result.filter(person => {
-        const bornCentury = String(Math.ceil(person.born / 100) || 1);
+        const bornCentury = String(Math.ceil(person.born / 100));
 
         return centuries.includes(bornCentury);
       });
@@ -111,6 +121,26 @@ export const PeoplePage = () => {
     });
   }, [sex, query, centuries, people, sortOrder]);
 
+  useEffect(() => {
+    const sort = searchParams.get('sort') as keyof Person | null; // 'name' | 'sex' | 'born' | 'died'
+    const order = searchParams.get('order'); // 'desc' | null
+
+    const next: SortOrder = {};
+
+    if (sort) {
+      next.name =
+        sort === 'name' ? (order === 'desc' ? 'desc' : 'asc') : undefined;
+      next.sex =
+        sort === 'sex' ? (order === 'desc' ? 'desc' : 'asc') : undefined;
+      next.born =
+        sort === 'born' ? (order === 'desc' ? 'desc' : 'asc') : undefined;
+      next.died =
+        sort === 'died' ? (order === 'desc' ? 'desc' : 'asc') : undefined;
+    }
+
+    setSortOrder(next);
+  }, [searchParams]);
+
   return (
     <>
       <h1 className="title">People Page</h1>
@@ -118,34 +148,46 @@ export const PeoplePage = () => {
       <div className="block">
         <div className="columns is-desktop is-flex-direction-row-reverse">
           <div className="column is-7-tablet is-narrow-desktop">
-            <PeopleFilters
-              searchParams={searchParams}
-              setSearchParams={setSearchParams}
-              sex={sex}
-              query={query}
-              centuries={centuries}
-            />
+            {!isLoading && people.length > 0 && (
+              <PeopleFilters
+                searchParams={searchParams}
+                setSearchParams={setSearchParams}
+                sex={sex}
+                query={query}
+                centuries={centuries}
+              />
+            )}
           </div>
 
           <div className="column">
             <div className="box table-container">
               {isLoading && <Loader />}
 
-              {isError && (
+              {!isLoading && isError && (
                 <p data-cy="peopleLoadingError" className="has-text-danger">
                   Something went wrong
                 </p>
               )}
 
-              {!isLoading && people.length === 0 && (
+              {!isLoading && !isError && people.length === 0 && (
                 <p data-cy="noPeopleMessage">
                   There are no people on the server
                 </p>
               )}
 
-              {visiblePeople && visiblePeople.length === 0 ? (
-                <p>There are no people matching the current search criteria</p>
-              ) : (
+              {
+                // prettier-ignore
+                !isLoading &&
+                  !isError &&
+                  people.length > 0 &&
+                  visiblePeople.length === 0 && (
+                  <p>
+                      There are no people matching the current search criteria
+                  </p>
+                )
+              }
+
+              {!isLoading && !isError && visiblePeople.length > 0 && (
                 <PeopleTable
                   visiblePeople={visiblePeople}
                   sortOrder={sortOrder}

@@ -18,6 +18,9 @@ export const PeopleFilters: React.FC<Props> = ({
 }) => {
   const location = useLocation();
 
+  const toUrl = (params: URLSearchParams) =>
+    `${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+
   const setGenderClass = (selectedGender: string) =>
     classNames({ 'is-active': sex === selectedGender });
 
@@ -30,19 +33,7 @@ export const PeopleFilters: React.FC<Props> = ({
       params.delete('sex');
     }
 
-    return `${location.pathname}?${params.toString()}`;
-  };
-
-  const handleGenders = (gender: string) => {
-    const params = new URLSearchParams(searchParams);
-
-    if (gender) {
-      params.set('sex', gender);
-    } else {
-      params.delete('sex');
-    }
-
-    setSearchParams(params);
+    return toUrl(params);
   };
 
   const centuriesClass = (century: string) =>
@@ -57,24 +48,7 @@ export const PeopleFilters: React.FC<Props> = ({
     params.delete('centuries');
     newCenturies.forEach(c => params.append('centuries', c));
 
-    return `${location.pathname}?${params.toString()}`;
-  };
-
-  const handleCenturies = (value: string) => {
-    const params = new URLSearchParams(searchParams);
-
-    if (value !== '') {
-      const newCenturies = centuries.includes(value)
-        ? centuries.filter(century => century !== value)
-        : [...centuries, value];
-
-      params.delete('centuries');
-      newCenturies.forEach(century => params.append('centuries', century));
-    } else {
-      params.delete('centuries');
-    }
-
-    setSearchParams(params);
+    return toUrl(params);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,28 +64,12 @@ export const PeopleFilters: React.FC<Props> = ({
     setSearchParams(params);
   };
 
-  const handleResetFilters = () => {
-    const params = new URLSearchParams(searchParams);
-    let isUpdated = false;
-
-    ['sex', 'query', 'centuries'].forEach(param => {
-      if (params.has(param)) {
-        params.delete(param);
-        isUpdated = true;
-      }
-    });
-
-    if (isUpdated) {
-      setSearchParams(params);
-    }
-  };
-
   const getCenturiesResetUrl = () => {
     const params = new URLSearchParams(searchParams);
 
     params.delete('centuries');
 
-    return `${location.pathname}?${params.toString()}`;
+    return toUrl(params);
   };
 
   const getResetFiltersUrl = () => {
@@ -121,7 +79,7 @@ export const PeopleFilters: React.FC<Props> = ({
     params.delete('query');
     params.delete('centuries');
 
-    return `${location.pathname}?${params.toString()}`;
+    return toUrl(params);
   };
 
   return (
@@ -134,7 +92,6 @@ export const PeopleFilters: React.FC<Props> = ({
             key={gender}
             to={getGenderUrl(gender)}
             className={setGenderClass(gender)}
-            onClick={() => handleGenders(gender)}
           >
             {gender === '' ? 'All' : gender === 'm' ? 'Male' : 'Female'}
           </Link>
@@ -149,7 +106,7 @@ export const PeopleFilters: React.FC<Props> = ({
             className="input"
             placeholder="Search"
             value={query}
-            onChange={e => handleChange(e)}
+            onChange={handleChange}
           />
 
           <span className="icon is-left">
@@ -167,7 +124,6 @@ export const PeopleFilters: React.FC<Props> = ({
                 data-cy="century"
                 to={getCenturyUrl(`${century}`)}
                 className={centuriesClass(`${century}`)}
-                onClick={() => handleCenturies(`${century}`)}
               >
                 {century}
               </Link>
@@ -177,9 +133,10 @@ export const PeopleFilters: React.FC<Props> = ({
           <div className="level-right ml-4">
             <Link
               data-cy="centuryALL"
-              className={`button is-success ${centuries.length !== 0 && 'is-outlined'}`}
+              className={classNames('button is-success', {
+                'is-outlined': centuries.length !== 0,
+              })}
               to={getCenturiesResetUrl()}
-              onClick={() => handleCenturies('')}
             >
               All
             </Link>
@@ -191,7 +148,6 @@ export const PeopleFilters: React.FC<Props> = ({
         <Link
           className="button is-link is-outlined is-fullwidth"
           to={getResetFiltersUrl()}
-          onClick={() => handleResetFilters}
         >
           Reset all filters
         </Link>

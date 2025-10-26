@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PersonRow } from './PersonRow';
 import React from 'react';
-import { Person } from '../types/Person';
+import { Person } from '../types/Person/Person';
 import classNames from 'classnames';
 import { SORTING, SortOrder } from '../types/SortOrder';
 
@@ -60,15 +60,32 @@ export const PeopleTable: React.FC<Props> = ({
     setSearchParams(params);
   };
 
+  const nextOrderFor = (col: keyof SortOrder): 'asc' | 'desc' | undefined => {
+    if (sortOrder[col] === undefined) {
+      return 'asc';
+    }
+
+    if (sortOrder[col] === 'asc') {
+      return 'desc';
+    }
+
+    return undefined; // było 'desc'
+  };
+
   const getSortUrl = (column: keyof SortOrder) => {
     const params = new URLSearchParams(searchParams);
+    const next = nextOrderFor(column);
 
-    params.set('sort', column);
-
-    if (sortOrder[column] === 'desc') {
-      params.set('order', 'desc');
-    } else {
+    if (!next) {
+      params.delete('sort');
       params.delete('order');
+    } else {
+      params.set('sort', column);
+      if (next === 'desc') {
+        params.set('order', 'desc');
+      } else {
+        params.delete('order');
+      } // asc = brak 'order'
     }
 
     return `${location.pathname}?${params.toString()}`;
@@ -82,6 +99,8 @@ export const PeopleTable: React.FC<Props> = ({
     });
   };
 
+  const COLUMNS = Object.values(SORTING) as Array<keyof SortOrder>;
+
   return (
     <table
       data-cy="peopleTable"
@@ -89,7 +108,7 @@ export const PeopleTable: React.FC<Props> = ({
     >
       <thead>
         <tr>
-          {Object.values(SORTING).map(key => (
+          {COLUMNS.map(key => (
             <th key={key}>
               <span className="is-flex is-flex-wrap-nowrap">
                 {key.charAt(0).toUpperCase() + key.slice(1)}

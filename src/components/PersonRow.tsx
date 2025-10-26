@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { PersonLink } from './PersonLink';
-import { Person } from '../types/Person';
+import { Person } from '../types/Person/Person';
 
 type Props = {
   person: Person;

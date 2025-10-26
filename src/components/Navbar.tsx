@@ -1,12 +1,15 @@
 import classNames from 'classnames';
-import { NavLink } from 'react-router-dom';
+// Navbar.tsx
+import { NavLink, useLocation } from 'react-router-dom';
 
 export const Navbar = () => {
-  const navigationClass = ({ isActive }: { isActive: boolean }) => {
-    return classNames('navbar-item', {
-      'has-background-grey-lighter': isActive,
-    });
-  };
+  const location = useLocation();
+  const keepPeopleSearch = location.pathname.startsWith('/people')
+    ? location.search
+    : '';
+
+  const navigationClass = ({ isActive }: { isActive: boolean }) =>
+    classNames('navbar-item', { 'has-background-grey-lighter': isActive });
 
   return (
     <nav
@@ -21,7 +24,11 @@ export const Navbar = () => {
             Home
           </NavLink>
 
-          <NavLink aria-current="page" className={navigationClass} to="/people">
+          <NavLink
+            aria-current="page"
+            className={navigationClass}
+            to={{ pathname: '/people', search: keepPeopleSearch }}
+          >
             People
           </NavLink>
         </div>
